@@ -3,11 +3,11 @@ import maplibregl from 'maplibre-gl';
 import Papa from 'papaparse';
 import repdData from '/src/csv/repd_tats_inferencia.csv';
 
-const REPD_csv = ({ map }) => {
+const REPD_csv = ({ map, setMarkers }) => {
   useEffect(() => {
     if (!map) return;
 
-    // Parse CSV data
+    const markers = [];
     Papa.parse(repdData, {
       download: true,
       header: true,
@@ -16,7 +16,7 @@ const REPD_csv = ({ map }) => {
           if (!row.lat_long || !row.lat_long.includes(',')) return; // Skip invalid rows
           const [lat, lng] = row.lat_long.split(',').map(Number);
           if (isNaN(lat) || isNaN(lng)) return; // Skip rows with invalid coordinates
-          new maplibregl.Marker()
+          const marker = new maplibregl.Marker()
             .setLngLat([lng, lat])
             .setPopup(
               new maplibregl.Popup().setHTML(`
@@ -26,10 +26,14 @@ const REPD_csv = ({ map }) => {
               `)
             )
             .addTo(map);
+          markers.push(marker);
         });
+        setMarkers((prev) => [...prev, ...markers]);
       },
     });
-  }, [map]);
+
+    return () => markers.forEach((marker) => marker.remove());
+  }, [map, setMarkers]);
 
   return null;
 };

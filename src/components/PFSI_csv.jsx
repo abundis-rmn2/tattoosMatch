@@ -12,24 +12,24 @@ const LOCATIONS = {
   'Lagos de Moreno': [21.2333, -102.2333],
   'Ciudad Guzmán': [19.8833, -103.3667],
   'El Grullo': [20.4333, -103.9667],
-  'Ocotlán': [19.9833, -103.3667]
+  'Ocotlán': [19.9833, -103.3667],
 };
 
-const PFSI_csv = ({ map }) => {
+const PFSI_csv = ({ map, setMarkers }) => {
   useEffect(() => {
     if (!map) return;
 
-    // Parse CSV data
+    const markers = [];
     Papa.parse(pfsiData, {
       download: true,
       header: true,
       complete: (result) => {
         result.data
-          .filter((row) => LOCATIONS[row.Delegacion_IJCF]) // Ensure location exists
+          .filter((row) => LOCATIONS[row.Delegacion_IJCF])
           .forEach((row) => {
             const position = LOCATIONS[row.Delegacion_IJCF];
-            if (!position) return; // Skip invalid locations
-            new maplibregl.Marker()
+            if (!position) return;
+            const marker = new maplibregl.Marker()
               .setLngLat([position[1], position[0]])
               .setPopup(
                 new maplibregl.Popup().setHTML(`
@@ -39,10 +39,14 @@ const PFSI_csv = ({ map }) => {
                 `)
               )
               .addTo(map);
+            markers.push(marker);
           });
+        setMarkers((prev) => [...prev, ...markers]);
       },
     });
-  }, [map]);
+
+    return () => markers.forEach((marker) => marker.remove());
+  }, [map, setMarkers]);
 
   return null;
 };
