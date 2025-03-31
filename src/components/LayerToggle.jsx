@@ -9,6 +9,7 @@ const LayerToggle = ({ repdMarkers, pfsiMarkers }) => {
     repdMarkers.forEach((marker) => {
       marker.getElement().style.display = showREPD ? 'none' : 'block';
     });
+    console.log(`REPD markers are now ${showREPD ? 'hidden' : 'visible'}`); // Log visibility change
   };
 
   const togglePFSI = () => {
@@ -16,6 +17,7 @@ const LayerToggle = ({ repdMarkers, pfsiMarkers }) => {
     pfsiMarkers.forEach((marker) => {
       marker.getElement().style.display = showPFSI ? 'none' : 'block';
     });
+    console.log(`PFSI markers are now ${showPFSI ? 'hidden' : 'visible'}`); // Log visibility change
   };
 
   return (

@@ -24,16 +24,25 @@ const PFSI_csv = ({ map, setMarkers }) => {
       download: true,
       header: true,
       complete: (result) => {
+        console.log(result.data);
         result.data
           .filter((row) => LOCATIONS[row.Delegacion_IJCF])
           .forEach((row) => {
             const position = LOCATIONS[row.Delegacion_IJCF];
             if (!position) return;
-            const marker = new maplibregl.Marker()
-              .setLngLat([position[1], position[0]])
+            const marker = new maplibregl.Marker({
+              element: document.createElement('div'),
+            });
+            marker.id = String(row.ID).trim().toLowerCase(); // Normalize ID
+            marker.getElement().style.backgroundColor = 'blue';
+            marker.getElement().style.width = '12px';
+            marker.getElement().style.height = '12px';
+            marker.getElement().style.borderRadius = '50%';
+            marker.getElement().style.border = '3px solid blue';
+            marker.setLngLat([position[1], position[0]])
               .setPopup(
                 new maplibregl.Popup().setHTML(`
-                  <strong>ID:</strong> ${row.ID || 'N/A'}<br />
+                  <strong>ID:</strong> ${row.ID|| 'N/A'}<br />
                   <strong>Delegation:</strong> ${row.Delegacion_IJCF || 'N/A'}<br />
                   <strong>Tattoos:</strong> ${row.Tatuajes || 'N/A'}
                 `)
