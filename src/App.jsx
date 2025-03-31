@@ -1,35 +1,49 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useEffect, useRef, useState } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import REPD_csv from './components/REPD_csv';
+import PFSI_csv from './components/PFSI_csv';
 
-function App() {
-  const [count, setCount] = useState(0)
+const App = () => {
+  const mapContainer = useRef(null);
+  const [map, setMap] = useState(null);
+
+  useEffect(() => {
+    if (!mapContainer.current) return; // Ensure the container is available
+
+    const mapInstance = new maplibregl.Map({
+      container: mapContainer.current,
+      style: 'https://demotiles.maplibre.org/style.json', // Updated style URL
+      center: [-103.3123, 20.6253],
+      zoom: 8,
+      maxZoom: 18 // Set maximum zoom level
+    });
+
+    mapInstance.scrollZoom.enable(); // Enable scroll zoom
+    mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
+    setMap(mapInstance);
+
+    return () => mapInstance.remove();
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div style={{ height: '100vh', width: '100vw' }}>
+      <div
+        ref={mapContainer}
+        style={{
+          height: '100vh', // Explicit height
+          width: '100vw',  // Explicit width
+          position: 'relative' // Ensure proper positioning
+        }}
+      />
+      {map && (
+        <>
+          <REPD_csv map={map} />
+          <PFSI_csv map={map} />
+        </>
+      )}
+    </div>
+  );
+};
 
-export default App
+export default App;
