@@ -5,6 +5,7 @@ import REPD_csv from './components/REPD_csv';
 import PFSI_csv from './components/PFSI_csv';
 import Edges_csv from './components/Edges_csv'; // Import Edges_csv
 import LayerToggle from './components/LayerToggle';
+import './App.css';
 
 const App = () => {
   const mapContainer = useRef(null);
