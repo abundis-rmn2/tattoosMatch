@@ -4,7 +4,6 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import REPD_csv from './components/REPD_csv';
 import PFSI_csv from './components/PFSI_csv';
 import Edges_csv from './components/Edges_csv'; // Import Edges_csv
-import LayerToggle from './components/LayerToggle';
 import './App.css';
 
 const App = () => {
@@ -19,9 +18,11 @@ const App = () => {
     const mapInstance = new maplibregl.Map({
       container: mapContainer.current,
       style: 'https://demotiles.maplibre.org/style.json',
-      center: [-103.3123, 20.6253],
-      zoom: 8,
-      maxZoom: 18,
+      center: [-105.3123, 20.6253],
+      zoom: 7,
+      maxZoom: 7,
+      minZoom: 7,
+      interactive: false, // Disable all user interactions
     });
 
     mapInstance.scrollZoom.enable();
@@ -50,7 +51,6 @@ const App = () => {
             repdMarkers={repdMarkers}
             pfsiMarkers={pfsiMarkers}
           />
-          <LayerToggle map={map} repdMarkers={repdMarkers} pfsiMarkers={pfsiMarkers} />
         </>
       )}
     </div>
