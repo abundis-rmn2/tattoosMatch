@@ -60,8 +60,16 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
                 type: 'LineString',
                 coordinates: [sourceCoords, targetCoords],
               },
-              properties: {},
+              properties: {
+                text: `${row.similarity}`,
+                similarity: row.similarity,
+                pfsi_id: normalizedPfsiId,
+                repd_id: normalizedRepdId,
+                pfsi_location: row.pfsi_location,
+                repd_location: row.repd_location,
+              },
             };
+
             edges.push(line);
           }
         });
@@ -88,13 +96,42 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
           },
         };
 
+        const textLayer = {
+          id: 'edges-text-layer',
+          type: 'symbol',
+          source: {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: edges,
+            },
+          },
+          layout: {
+            'text-field': ['get', 'text'], // Access the 'text' property
+            'text-size': 12,
+            'text-offset': [0, 0.5], // Optional: slight vertical offset
+            'text-anchor': 'center',
+            'symbol-placement': 'line',
+            'text-allow-overlap': true, // Ensure text appears even if overlapping
+          },
+          paint: {
+            'text-color': '#000',
+            'text-halo-color': '#fff',
+            'text-halo-width': 1,
+          },
+        };
+
         if (map.getLayer('edges-layer')) {
-          console.log('Updating existing edges-layer.');
-          map.getSource('edges-layer').setData(edgeLayer.source.data);
-        } else {
-          console.log('Adding new edges-layer.');
-          map.addLayer(edgeLayer);
+          console.log('Removing existing edges-layer and edges-text-layer.');
+          map.removeLayer('edges-layer');
+          map.removeSource('edges-layer');
+          if (map.getLayer('edges-text-layer')) {
+            map.removeLayer('edges-text-layer');
+          }
         }
+
+        map.addLayer(edgeLayer);
+        map.addLayer(textLayer);
       },
       error: (error) => {
         console.error('Error parsing CSV:', error);
@@ -106,6 +143,10 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
         console.log('Removing edges-layer.');
         map.removeLayer('edges-layer');
         map.removeSource('edges-layer');
+      }
+      if (map.getLayer('edges-text-layer')) {
+        console.log('Removing edges-text-layer.');
+        map.removeLayer('edges-text-layer');
       }
     };
   }, [map, repdMarkers, pfsiMarkers]);
