@@ -5,6 +5,7 @@ import REPD_csv from './components/REPD_csv';
 import PFSI_csv from './components/PFSI_csv';
 import Edges_csv from './components/Edges_csv'; // Import Edges_csv
 import LayerToggle from './components/LayerToggle';
+import './App.css';
 
 const App = () => {
   const mapContainer = useRef(null);
@@ -44,7 +45,11 @@ const App = () => {
         <>
           <REPD_csv map={map} setMarkers={setRepdMarkers} />
           <PFSI_csv map={map} setMarkers={setPfsiMarkers} />
-          <Edges_csv map={map} repdMarkers={repdMarkers} pfsiMarkers={pfsiMarkers} />
+          <Edges_csv
+            map={map}
+            repdMarkers={repdMarkers}
+            pfsiMarkers={pfsiMarkers}
+          />
           <LayerToggle map={map} repdMarkers={repdMarkers} pfsiMarkers={pfsiMarkers} />
         </>
       )}

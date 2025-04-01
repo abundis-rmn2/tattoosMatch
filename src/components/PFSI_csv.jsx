@@ -34,6 +34,20 @@ const PFSI_csv = ({ map, setMarkers }) => {
               element: document.createElement('div'),
             });
             marker.id = String(row.ID).trim().toLowerCase(); // Normalize ID
+
+            // Add row properties to the marker object
+            marker.properties = {
+              Delegacion_IJCF: row.Delegacion_IJCF || null,
+              Edad: row.Edad || null,
+              Fecha_Ingreso: row.Fecha_Ingreso || null,
+              ID: row.ID || null,
+              Indumentarias: row.Indumentarias || null,
+              Probable_nombre: row.Probable_nombre || null,
+              Senas_Particulares: row.Senas_Particulares || null,
+              Sexo: row.Sexo || null,
+              Tatuajes: row.Tatuajes || null,
+            };
+
             marker.getElement().style.backgroundColor = 'blue';
             marker.getElement().style.width = '12px';
             marker.getElement().style.height = '12px';
@@ -42,7 +56,7 @@ const PFSI_csv = ({ map, setMarkers }) => {
             marker.setLngLat([position[1], position[0]])
               .setPopup(
                 new maplibregl.Popup().setHTML(`
-                  <strong>ID:</strong> ${row.ID|| 'N/A'}<br />
+                  <strong>ID:</strong> ${row.ID || 'N/A'}<br />
                   <strong>Delegation:</strong> ${row.Delegacion_IJCF || 'N/A'}<br />
                   <strong>Tattoos:</strong> ${row.Tatuajes || 'N/A'}
                 `)
