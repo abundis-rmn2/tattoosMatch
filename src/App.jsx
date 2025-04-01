@@ -45,7 +45,11 @@ const App = () => {
         <>
           <REPD_csv map={map} setMarkers={setRepdMarkers} />
           <PFSI_csv map={map} setMarkers={setPfsiMarkers} />
-          <Edges_csv map={map} repdMarkers={repdMarkers} pfsiMarkers={pfsiMarkers} />
+          <Edges_csv
+            map={map}
+            repdMarkers={repdMarkers}
+            pfsiMarkers={pfsiMarkers}
+          />
           <LayerToggle map={map} repdMarkers={repdMarkers} pfsiMarkers={pfsiMarkers} />
         </>
       )}

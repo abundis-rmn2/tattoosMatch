@@ -1,9 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import * as d3 from 'd3';
 import Papa from 'papaparse';
 import edgesData from '/src/csv/tattoo_matches_all.csv';
 
 const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
+  const [filterText, setFilterText] = useState('');
+  const [filteredEdges, setFilteredEdges] = useState([]);
+  const [selectedEdge, setSelectedEdge] = useState(null); // State for the selected edge
+  const svgContainerRef = useRef(null);
+
   useEffect(() => {
     if (!map || !repdMarkers.length || !pfsiMarkers.length) {
       console.warn('Map or markers are not ready.');
@@ -29,6 +34,8 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
       .style('pointer-events', 'none') // Disable pointer events for the SVG container
       .style('z-index', '0'); // Ensure edges are below markers
 
+    svgContainerRef.current = svgContainer;
+
     const tooltip = d3
       .select(map.getContainer())
       .append('div')
@@ -44,6 +51,8 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
 
     const updateLinks = () => {
       const edges = [];
+      const relatedRepdIds = new Set();
+
       Papa.parse(edgesData, {
         download: true,
         header: true,
@@ -73,9 +82,25 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
                 return;
               }
 
+              if (
+                filterText &&
+                !(
+                  row.pfsi_description?.toLowerCase().includes(filterText.toLowerCase()) ||
+                  row.pfsi_location?.toLowerCase().includes(filterText.toLowerCase()) ||
+                  row.repd_description?.toLowerCase().includes(filterText.toLowerCase()) ||
+                  row.repd_location?.toLowerCase().includes(filterText.toLowerCase()) ||
+                  row.missing_name?.toLowerCase().includes(filterText.toLowerCase()) ||
+                  row.body_name?.toLowerCase().includes(filterText.toLowerCase())
+                )
+              ) {
+                return; // Skip edges that don't match the filter
+              }
+
               edges.push({
                 source: map.project(sourceCoords),
                 target: map.project(targetCoords),
+                sourceMarker,
+                targetMarker,
                 body_age: row.body_age,
                 body_location: row.body_location,
                 body_name: row.body_name,
@@ -93,6 +118,20 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
                 text_match: row.text_match,
                 text_similarity: row.text_similarity,
               });
+
+              relatedRepdIds.add(normalizedRepdId);
+            }
+          });
+
+          setFilteredEdges(edges);
+
+          // Hide unrelated REPD markers
+          repdMarkers.forEach((marker) => {
+            const markerId = String(marker.id).trim().toLowerCase();
+            if (relatedRepdIds.has(markerId)) {
+              marker.getElement().style.display = 'block';
+            } else {
+              marker.getElement().style.display = 'none';
             }
           });
 
@@ -103,6 +142,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
             .append('path')
             .style('opacity', 0) // Start with opacity 0
             .style('pointer-events', 'visibleStroke') // Enable pointer events for edges
+            .style('stroke-width', 4)
             .merge(links)
             .attr('d', (d) => {
               const midX = (d.source.x + d.target.x) / 2;
@@ -112,12 +152,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
             .attr('stroke', '#ccc')
             .attr('fill', 'none')
             .on('click', (event, d) => {
-              const filteredNodes = {
-                repd_id: d.repd_id,
-                pfsi_id: d.pfsi_id,
-              };
-              console.log('Filtered Nodes:', filteredNodes);
-              // Add your filtering logic here, e.g., updating state or triggering a callback
+              setSelectedEdge(d); // Set the selected edge
             })
             .on('mouseover', (event, d) => {
               tooltip
@@ -141,7 +176,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
                 `)
                 .style('left', `${event.pageX + 10}px`)
                 .style('top', `${event.pageY + 10}px`)
-                .style('opacity', 1);
+                .style('opacity', 1)
             })
             .on('mousemove', (event) => {
               tooltip
@@ -201,17 +236,189 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
     map.on('move', render);
     map.on('resize', render);
 
+    // Add click event to reset filtered edges
+    map.on('click', () => {
+      setSelectedEdge(null); // Reset selected edge
+      svgContainerRef.current.selectAll('path').style('opacity', 1); // Show all edges
+      repdMarkers.forEach((marker) => (marker.getElement().style.display = 'block')); // Show all REPD markers
+      pfsiMarkers.forEach((marker) => (marker.getElement().style.display = 'block')); // Show all PFSI markers
+    });
+
     updateLinks();
 
     return () => {
       map.off('move', render);
       map.off('resize', render);
+      map.off('click'); // Remove click event listener
       svgContainer.remove();
       tooltip.remove();
     };
-  }, [map, repdMarkers, pfsiMarkers]);
+  }, [map, repdMarkers, pfsiMarkers, filterText]);
 
-  return null;
+  useEffect(() => {
+    if (!svgContainerRef.current) return; // Ensure svgContainerRef.current is not null
+
+    const svgContainer = svgContainerRef.current;
+
+    if (!selectedEdge) {
+      // Reset to show only filtered edges and their related nodes
+      svgContainer.selectAll('path').style('opacity', (d) => (filteredEdges.includes(d) ? 1 : 0));
+      svgContainer.selectAll('path').style('pointer-events', (d) => (filteredEdges.includes(d) ? 'auto' : 'none'));
+
+      // Show only nodes related to filtered edges
+      const relatedRepdIds = new Set(filteredEdges.map((edge) => edge.targetMarker.id));
+      const relatedPfsiIds = new Set(filteredEdges.map((edge) => edge.sourceMarker.id));
+
+      repdMarkers.forEach((marker) => {
+        if (relatedRepdIds.has(marker.id)) {
+          marker.getElement().style.display = 'block';
+          marker.getElement().style.opacity = 1;
+          marker.getElement().style.border = '3px solid orange';
+        } else {
+            marker.getElement().style.opacity = 0;
+        }
+      });
+
+      pfsiMarkers.forEach((marker) => {
+        if (relatedPfsiIds.has(marker.id)) {
+          marker.getElement().style.display = 'block';
+          marker.getElement().style.opacity = 1;
+          marker.getElement().style.border = '3px solid orange';
+        } else {
+            marker.getElement().style.opacity = 0;
+        }
+      });
+
+      return;
+    }
+
+    // Highlight the selected edge in red and dim other edges
+    svgContainer.selectAll('path').style('opacity', (d) => (d === selectedEdge ? 1 : 0.2));
+    svgContainer.selectAll('path').style('pointer-events', (d) => (d === selectedEdge ? 'auto' : 'none'));
+
+    svgContainer
+      .selectAll('path')
+      .filter((d) => d === selectedEdge)
+      .attr('stroke', 'red') // Force the selected edge to remain red
+      .attr('stroke-width', 6);
+
+    // Highlight the selected edge's nodes in red and set their opacity to 1
+    repdMarkers.forEach((marker) => {
+      if (marker.id === selectedEdge.targetMarker.id) {
+        marker.getElement().style.display = 'block';
+        marker.getElement().style.opacity = 1; // Ensure opacity is 1 for the selected node
+        marker.getElement().style.border = '3px solid red';
+      } else {
+        marker.getElement().style.display = 'none';
+      }
+    });
+
+    pfsiMarkers.forEach((marker) => {
+      if (marker.id === selectedEdge.sourceMarker.id) {
+        marker.getElement().style.display = 'block';
+        marker.getElement().style.opacity = 1; // Ensure opacity is 1 for the selected node
+        marker.getElement().style.border = '3px solid red';
+      } else {
+        marker.getElement().style.display = 'none';
+      }
+    });
+  }, [selectedEdge, filteredEdges, repdMarkers, pfsiMarkers]);
+
+  const highlightEdgeAndNodes = (edge, highlight) => {
+    const svgContainer = svgContainerRef.current;
+    if (!svgContainer) return; // Ensure svgContainer is not null
+
+    const edgeElement = svgContainer.selectAll('path').filter((d) => d === edge);
+    const sourceElement = edge.sourceMarker.getElement();
+    const targetElement = edge.targetMarker.getElement();
+
+    if (highlight) {
+      edgeElement
+        .attr('stroke', 'red')
+        .attr('stroke-width', 6)
+        .style('opacity', 1) // Ensure opacity is 1 for the hovered edge
+        .style('z-index', 9);
+      sourceElement.style.border = '3px solid red';
+      sourceElement.style.opacity = 1; // Ensure opacity is 1 for the source node
+      sourceElement.style.zIndex = 8;
+      targetElement.style.border = '3px solid red';
+      targetElement.style.opacity = 1; // Ensure opacity is 1 for the target node
+      targetElement.style.zIndex = 8;
+    } else {
+      edgeElement
+        .attr('stroke', '#ccc')
+        .attr('stroke-width', 4)
+        .style('opacity', 0.2) // Reset opacity when not hovered
+        .style('z-index', 0);
+      sourceElement.style.border = '3px solid orange';
+      sourceElement.style.opacity = 0.2; // Reset opacity for the source node
+      sourceElement.style.zIndex = 5;
+      targetElement.style.border = '3px solid orange';
+      targetElement.style.opacity = 0.2; // Reset opacity for the target node
+      targetElement.style.zIndex = 5;
+    }
+  };
+
+  return (
+    <>
+      <input
+        type="text"
+        placeholder="Filter edges..."
+        value={filterText}
+        onChange={(e) => setFilterText(e.target.value)}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          zIndex: 4,
+          padding: '5px',
+          border: '1px solid #ccc',
+          borderRadius: '3px',
+        }}
+      />
+      {filterText && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50px',
+            left: '10px',
+            zIndex: 4,
+            background: '#fff',
+            border: '1px solid #ccc',
+            borderRadius: '3px',
+            padding: '10px',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            width: '300px',
+          }}
+        >
+          <strong>Filtered Edges:</strong>
+          <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
+            {filteredEdges.map((edge, index) => (
+              <li
+                key={index}
+                style={{ marginBottom: '10px', cursor: 'pointer' }}
+                onMouseEnter={() => highlightEdgeAndNodes(edge, true)}
+                onMouseLeave={() => highlightEdgeAndNodes(edge, false)}
+              >
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedEdge(edge); // Set the selected edge on click
+                  }}
+                >
+                  {edge.missing_name} - {edge.body_name}<br />
+                  {edge.pfsi_description} - {edge.repd_description}<br />
+                  {edge.pfsi_location} - {edge.repd_location}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
+  );
 };
 
 export default Edges_csv;
