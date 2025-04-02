@@ -2,11 +2,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import * as d3 from 'd3';
 import Papa from 'papaparse';
 import edgesData from '/src/csv/tattoo_matches_all.csv';
+import ModalRelation from './modalRelation';
+import SearchAndList from './SearchAndList'; // Import the new component
 
-const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
+const Edges_csv = ({ map, repdMarkers, pfsiMarkers, repdData, pfsiData }) => {
   const [filterText, setFilterText] = useState('');
   const [filteredEdges, setFilteredEdges] = useState([]);
   const [selectedEdge, setSelectedEdge] = useState(null); // State for the selected edge
+  const [hoveredEdge, setHoveredEdge] = useState(null); // State for hovered edge
   const svgContainerRef = useRef(null);
 
   useEffect(() => {
@@ -129,9 +132,11 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
           repdMarkers.forEach((marker) => {
             const markerId = String(marker.id).trim().toLowerCase();
             if (relatedRepdIds.has(markerId)) {
-              marker.getElement().style.display = 'block';
+              //marker.getElement().style.display = 'block';
+              marker.getElement().style.opacity = 1; // Show related markers
             } else {
-              marker.getElement().style.display = 'none';
+              //marker.getElement().style.display = 'none';
+              marker.getElement().style.opacity = 0; // Hide unrelated markers
             }
           });
 
@@ -153,8 +158,11 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
             .attr('fill', 'none')
             .on('click', (event, d) => {
               setSelectedEdge(d); // Set the selected edge
+              setHoveredEdge(null); // Clear hovered edge
             })
             .on('mouseover', (event, d) => {
+              setHoveredEdge(d); // Set hovered edge
+              setSelectedEdge(null); // Clear selected edge to prioritize hover
               tooltip
                 .html(`
                   <strong>Body Age:</strong> ${d.body_age}<br>
@@ -177,6 +185,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
                 .style('left', `${event.pageX + 10}px`)
                 .style('top', `${event.pageY + 10}px`)
                 .style('opacity', 1)
+                .style('z-index', 10); // Ensure tooltip is above edges
             })
             .on('mousemove', (event) => {
               tooltip
@@ -184,6 +193,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
                 .style('top', `${event.pageY + 10}px`);
             })
             .on('mouseout', () => {
+              setHoveredEdge(null); // Clear hovered edge
               tooltip.style('opacity', 0);
             })
             .transition()
@@ -193,7 +203,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
           links
             .exit()
             .transition()
-            .duration(30) // Fade-out duration
+            .duration(300) // Fade-out duration
             .style('opacity', 0)
             .remove();
 
@@ -209,7 +219,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
             .attr('fill', '#000')
             .attr('font-size', '12px')
             .attr('text-anchor', 'middle')
-            .text((d) => d.similarity)
+            //.text((d) => d.pfsi_description)
             .transition()
             .duration(300) // Fade-in duration
             .style('opacity', 1);
@@ -228,7 +238,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
     };
 
     const render = () => {
-      svgContainer.selectAll('path').transition().duration(300).style('opacity', 0).remove();
+      svgContainer.selectAll('path').transition().duration(100).style('opacity', 0).remove();
       svgContainer.selectAll('text').transition().duration(300).style('opacity', 0).remove();
       updateLinks();
     };
@@ -240,8 +250,11 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
     map.on('click', () => {
       setSelectedEdge(null); // Reset selected edge
       svgContainerRef.current.selectAll('path').style('opacity', 1); // Show all edges
-      repdMarkers.forEach((marker) => (marker.getElement().style.display = 'block')); // Show all REPD markers
-      pfsiMarkers.forEach((marker) => (marker.getElement().style.display = 'block')); // Show all PFSI markers
+      //repdMarkers.forEach((marker) => (marker.getElement().style.display = 'block')); // Show all REPD markers
+      repdMarkers.forEach((marker) => (marker.getElement().style.opacity = 1)); // Show all REPD markers
+      //pfsiMarkers.forEach((marker) => (marker.getElement().style.display = 'block')); // Show all PFSI markers
+      pfsiMarkers.forEach((marker) => (marker.getElement().style.opacity = 1)); // Show all PFSI markers
+      setFilteredEdgeList(null); // Reset filtered edges
     });
 
     updateLinks();
@@ -292,24 +305,24 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
       return;
     }
 
-    // Highlight the selected edge in red and dim other edges
+    // Highlight the selected edge (on clicked) in red and dim other edges
     svgContainer.selectAll('path').style('opacity', (d) => (d === selectedEdge ? 1 : 0.2));
     svgContainer.selectAll('path').style('pointer-events', (d) => (d === selectedEdge ? 'auto' : 'none'));
-
+    svgContainer.selectAll('path').style('z-index', (d) => (d === selectedEdge ? 9 : 4));
     svgContainer
-      .selectAll('path')
       .filter((d) => d === selectedEdge)
       .attr('stroke', 'red') // Force the selected edge to remain red
-      .attr('stroke-width', 6);
+      .style('z-index', 10); // Ensure the selected edge is above others
+      
 
-    // Highlight the selected edge's nodes in red and set their opacity to 1
+    // Highlight the selected edge's (on clicked) nodes in red and set their opacity to 1
     repdMarkers.forEach((marker) => {
       if (marker.id === selectedEdge.targetMarker.id) {
         marker.getElement().style.display = 'block';
         marker.getElement().style.opacity = 1; // Ensure opacity is 1 for the selected node
         marker.getElement().style.border = '3px solid red';
       } else {
-        marker.getElement().style.display = 'none';
+        marker.getElement().style.opacity = 0; // Hide unrelated markers
       }
     });
 
@@ -319,7 +332,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
         marker.getElement().style.opacity = 1; // Ensure opacity is 1 for the selected node
         marker.getElement().style.border = '3px solid red';
       } else {
-        marker.getElement().style.display = 'none';
+        marker.getElement().style.opacity = 0; // Hide unrelated markers
       }
     });
   }, [selectedEdge, filteredEdges, repdMarkers, pfsiMarkers]);
@@ -332,27 +345,34 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
     const sourceElement = edge.sourceMarker.getElement();
     const targetElement = edge.targetMarker.getElement();
 
-    if (highlight) {
+    if (!edgeElement || !sourceElement || !targetElement) return; // Ensure elements exist
+
+    // Highlight the edge and nodes on hover
+    if (highlight && edge !== selectedEdge) {
       edgeElement
-        .attr('stroke', 'red')
-        .attr('stroke-width', 6)
+        .attr('stroke', 'yellow')
+        .attr('stroke-width', 9)
         .style('opacity', 1) // Ensure opacity is 1 for the hovered edge
-        .style('z-index', 9);
+        .style('z-index', 11);
       sourceElement.style.border = '3px solid red';
+      sourceElement.style.display = 'block';
       sourceElement.style.opacity = 1; // Ensure opacity is 1 for the source node
       sourceElement.style.zIndex = 8;
+      targetElement.style.display = 'block';
       targetElement.style.border = '3px solid red';
       targetElement.style.opacity = 1; // Ensure opacity is 1 for the target node
-      targetElement.style.zIndex = 8;
-    } else {
+      targetElement.style.zIndex = 10;
+    } else if (edge !== selectedEdge) {
       edgeElement
         .attr('stroke', '#ccc')
         .attr('stroke-width', 4)
-        .style('opacity', 0.2) // Reset opacity when not hovered
-        .style('z-index', 0);
+        .style('opacity', 0.6) // Reset opacity when not hovered
+        .style('z-index', 2);
       sourceElement.style.border = '3px solid orange';
+      sourceElement.style.display = 'block';
       sourceElement.style.opacity = 0.2; // Reset opacity for the source node
       sourceElement.style.zIndex = 5;
+      targetElement.style.display = 'block';
       targetElement.style.border = '3px solid orange';
       targetElement.style.opacity = 0.2; // Reset opacity for the target node
       targetElement.style.zIndex = 5;
@@ -361,62 +381,23 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
 
   return (
     <>
-      <input
-        type="text"
-        placeholder="Filter edges..."
-        value={filterText}
-        onChange={(e) => setFilterText(e.target.value)}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          zIndex: 4,
-          padding: '5px',
-          border: '1px solid #ccc',
-          borderRadius: '3px',
-        }}
+      <SearchAndList
+        filterText={filterText}
+        setFilterText={setFilterText}
+        filteredEdges={filteredEdges}
+        highlightEdgeAndNodes={highlightEdgeAndNodes}
+        setHoveredEdge={setHoveredEdge}
+        setSelectedEdge={setSelectedEdge}
       />
-      {filterText && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '50px',
-            left: '10px',
-            zIndex: 4,
-            background: '#fff',
-            border: '1px solid #ccc',
-            borderRadius: '3px',
-            padding: '10px',
-            maxHeight: '200px',
-            overflowY: 'auto',
-            width: '300px',
-          }}
-        >
-          <strong>Filtered Edges:</strong>
-          <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
-            {filteredEdges.map((edge, index) => (
-              <li
-                key={index}
-                style={{ marginBottom: '10px', cursor: 'pointer' }}
-                onMouseEnter={() => highlightEdgeAndNodes(edge, true)}
-                onMouseLeave={() => highlightEdgeAndNodes(edge, false)}
-              >
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSelectedEdge(edge); // Set the selected edge on click
-                  }}
-                >
-                  {edge.missing_name} - {edge.body_name}<br />
-                  {edge.pfsi_description} - {edge.repd_description}<br />
-                  {edge.pfsi_location} - {edge.repd_location}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <ModalRelation
+        edge={selectedEdge || hoveredEdge}
+        onClose={() => {
+          setSelectedEdge(null);
+          setHoveredEdge(null);
+        }}
+        repdData={repdData}
+        pfsiData={pfsiData}
+      />
     </>
   );
 };

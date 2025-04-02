@@ -15,11 +15,13 @@ const LOCATIONS = {
   'Ocotlán': [19.9833, -103.3667],
 };
 
-const PFSI_csv = ({ map, setMarkers }) => {
+const PFSI_csv = ({ map, setMarkers, setPfsiData }) => { // Add setPfsiData prop
   useEffect(() => {
     if (!map) return;
 
     const markers = [];
+    const markerProperties = {};
+
     Papa.parse(pfsiData, {
       download: true,
       header: true,
@@ -30,10 +32,14 @@ const PFSI_csv = ({ map, setMarkers }) => {
           .forEach((row) => {
             const position = LOCATIONS[row.Delegacion_IJCF];
             if (!position) return;
+
+            const markerId = String(row.ID).trim().toLowerCase(); // Normalize ID
+            markerProperties[markerId] = row; // Store marker properties by ID
+
             const marker = new maplibregl.Marker({
               element: document.createElement('div'),
             });
-            marker.id = String(row.ID).trim().toLowerCase(); // Normalize ID
+            marker.id = markerId;
 
             // Add row properties to the marker object
             marker.properties = {
@@ -64,12 +70,14 @@ const PFSI_csv = ({ map, setMarkers }) => {
               .addTo(map);
             markers.push(marker);
           });
+
+        setPfsiData(markerProperties); // Store marker properties in shared state
         setMarkers((prev) => [...prev, ...markers]);
       },
     });
 
     return () => markers.forEach((marker) => marker.remove());
-  }, [map, setMarkers]);
+  }, [map, setMarkers, setPfsiData]);
 
   return null;
 };
