@@ -3,8 +3,9 @@ import * as d3 from 'd3';
 import Papa from 'papaparse';
 import edgesData from '/src/csv/tattoo_matches_all.csv';
 import ModalRelation from './modalRelation';
+import SearchAndList from './SearchAndList'; // Import the new component
 
-const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
+const Edges_csv = ({ map, repdMarkers, pfsiMarkers, repdData, pfsiData }) => {
   const [filterText, setFilterText] = useState('');
   const [filteredEdges, setFilteredEdges] = useState([]);
   const [selectedEdge, setSelectedEdge] = useState(null); // State for the selected edge
@@ -253,6 +254,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
       repdMarkers.forEach((marker) => (marker.getElement().style.opacity = 1)); // Show all REPD markers
       //pfsiMarkers.forEach((marker) => (marker.getElement().style.display = 'block')); // Show all PFSI markers
       pfsiMarkers.forEach((marker) => (marker.getElement().style.opacity = 1)); // Show all PFSI markers
+      setFilteredEdgeList(null); // Reset filtered edges
     });
 
     updateLinks();
@@ -359,7 +361,7 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
       targetElement.style.display = 'block';
       targetElement.style.border = '3px solid red';
       targetElement.style.opacity = 1; // Ensure opacity is 1 for the target node
-      targetElement.style.zIndex = 8;
+      targetElement.style.zIndex = 10;
     } else if (edge !== selectedEdge) {
       edgeElement
         .attr('stroke', '#ccc')
@@ -379,76 +381,22 @@ const Edges_csv = ({ map, repdMarkers, pfsiMarkers }) => {
 
   return (
     <>
-      <input
-        type="text"
-        placeholder="Buscador (rosa, mano, antonio, etc.)"
-        value={filterText}
-        onChange={(e) => setFilterText(e.target.value)}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          zIndex: 4,
-          width: '17vw',
-          padding: '10px',
-          border: '1px solid #ccc',
-          borderRadius: '3px',
-        }}
+      <SearchAndList
+        filterText={filterText}
+        setFilterText={setFilterText}
+        filteredEdges={filteredEdges}
+        highlightEdgeAndNodes={highlightEdgeAndNodes}
+        setHoveredEdge={setHoveredEdge}
+        setSelectedEdge={setSelectedEdge}
       />
-      {filterText && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '50px',
-            left: '10px',
-            zIndex: 4,
-            background: '#fff',
-            border: '1px solid #ccc',
-            borderRadius: '3px',
-            padding: '10px',
-            maxHeight: 'calc(100vh - 100px)',
-            overflowY: 'auto',
-            width: '17vw',
-          }}
-        >
-          <strong>Filtered Edges:</strong>
-          <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
-            {filteredEdges.map((edge, index) => (
-              <li
-                key={index}
-                style={{ marginBottom: '10px', cursor: 'pointer' }}
-                onMouseEnter={() => {
-                  highlightEdgeAndNodes(edge, true)
-                  setHoveredEdge(edge); // Show modal on hover
-                  setSelectedEdge(null); // Clear selected edge to prioritize hover
-                }}
-                onMouseLeave={() => {setHoveredEdge(null)
-                  highlightEdgeAndNodes(edge, false)}
-                } // Clear modal on mouse leave
-              >
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSelectedEdge(edge); // Set the selected edge on click
-                    console.log(edge);
-                  }}
-                >
-                  {edge.missing_name} - {edge.body_name}<br />
-                  {edge.pfsi_description} - {edge.repd_description}<br />
-                  {edge.pfsi_location} - {edge.repd_location}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       <ModalRelation
         edge={selectedEdge || hoveredEdge}
         onClose={() => {
           setSelectedEdge(null);
           setHoveredEdge(null);
         }}
+        repdData={repdData}
+        pfsiData={pfsiData}
       />
     </>
   );

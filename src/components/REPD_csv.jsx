@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 import repdData from '/src/csv/repd_tats_inferencia.csv';
 import repdPrincipalData from '/src/csv/repd_principal_tats.csv'; // Import the new CSV file
 
-const REPD_csv = ({ map, setMarkers }) => {
+const REPD_csv = ({ map, setMarkers, setRepdData }) => { // Add setRepdData prop
   useEffect(() => {
     if (!map) return;
 
@@ -21,6 +21,8 @@ const REPD_csv = ({ map, setMarkers }) => {
             markerProperties[row.id_cedula_busqueda.trim().toLowerCase()] = row;
           }
         });
+
+        setRepdData(markerProperties); // Store marker properties in shared state
       },
     });
 
@@ -103,7 +105,7 @@ const REPD_csv = ({ map, setMarkers }) => {
     });
 
     return () => markers.forEach((marker) => marker.remove());
-  }, [map, setMarkers]);
+  }, [map, setMarkers, setRepdData]);
 
   return null;
 };

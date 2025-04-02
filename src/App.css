@@ -1,6 +1,25 @@
-
 /* En tu archivo CSS global */
 .maplibregl-marker {
   z-index: 1; /* Asegura que los marcadores estén sobre el SVG */
   pointer-events: auto !important; /* Permite interacción con los marcadores */
+}
+
+.edge-item {
+  margin-bottom: 10px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 3px;
+}
+
+.edge-item:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.edge-item:nth-child(odd) {
+  background-color: #e6e6e6;
+}
+
+.edge-item:hover,
+.edge-item.selected {
+  background-color: #ffff99; /* Highlight yellow on hover or selection */
 }
